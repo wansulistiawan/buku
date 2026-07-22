@@ -11,8 +11,8 @@
     <!-- Cropper.js -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
-    <!-- Docx.js -->
-    <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.js"></script>
+    <!-- Docx.js (Menggunakan server unpkg yang lebih stabil) -->
+<script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
     <!-- pdfmake & vfs_fonts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
@@ -565,8 +565,16 @@
         }
 
         async function generateWord() {
-            if (pages.length === 0) return;
-            try {
+    if (pages.length === 0) return;
+
+    // --- TAMBAHKAN BLOK PENGAMAN INI ---
+    if (typeof window.docx === 'undefined') {
+        alert('Gagal mengekspor: Sistem pembuat Word belum selesai dimuat oleh browser. Pastikan koneksi lancar, lalu refresh (muat ulang) halaman ini.');
+        return;
+    }
+    // -----------------------------------
+
+    try {
                 const { Document, Packer, Paragraph, TextRun, ImageRun, PageBreak } = window.docx;
                 let docSections = [];
 
