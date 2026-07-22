@@ -4,20 +4,43 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Book Scanner Pro Ultimate</title>
+    
     <!-- Tailwind CSS -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    
     <!-- Tesseract.js -->
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
+    
     <!-- Cropper.js -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
-    <<!-- Docx.js (Versi 7.8.2 yang lebih ringan & stabil untuk Mobile) -->
+    
+    <!-- Docx.js (Versi Stabil untuk Mobile) -->
     <script src="https://cdn.jsdelivr.net/npm/docx@7.8.2/build/index.js"></script>
+    
     <!-- pdfmake & vfs_fonts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+    <!-- html-to-pdfmake untuk integrasi Quill ke PDF -->
+    <script src="https://cdn.jsdelivr.net/npm/html-to-pdfmake@2.4.8/browser.js"></script>
+    
+    <!-- Quill.js (Rich Text Editor) -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+
+    <!-- Google Drive APIs -->
+    <script async defer src="https://apis.google.com/js/api.js"></script>
+    <script async defer src="https://accounts.google.com/gsi/client"></script>
+
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        /* Penyesuaian Quill Editor dengan Tailwind */
+        .ql-toolbar.ql-snow { border-radius: 0.5rem 0.5rem 0 0; border-color: #e2e8f0; background: #f8fafc; }
+        .ql-container.ql-snow { border-radius: 0 0 0.5rem 0.5rem; border-color: #e2e8f0; background: #ffffff; min-height: 120px; font-size: 14px; }
+        .ql-editor { min-height: 120px; }
+    </style>
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col">
 
@@ -35,8 +58,13 @@
             </div>
 
             <div class="flex items-center space-x-3 relative">
+                <!-- Tombol Pengaturan -->
+                <button onclick="openSettingsModal()" class="p-2.5 text-slate-500 hover:bg-slate-100 rounded-xl transition">
+                    <i data-lucide="settings" class="w-5 h-5"></i>
+                </button>
+
                 <!-- Dropdown Bahasa OCR -->
-                <div class="flex items-center space-x-1.5 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
+                <div class="hidden md:flex items-center space-x-1.5 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
                     <i data-lucide="languages" class="w-4 h-4 text-slate-500"></i>
                     <select id="ocr-lang" class="bg-transparent text-xs font-medium text-slate-700 focus:outline-none">
                         <option value="ind+eng">ID + EN</option>
@@ -47,7 +75,7 @@
                     </select>
                 </div>
 
-                <!-- Tombol Download Global -->
+                <!-- Tombol Download & Drive -->
                 <div class="relative">
                     <button id="btn-global-download" onclick="toggleExportMenu(event)" disabled class="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-xl font-medium transition disabled:opacity-40 disabled:cursor-not-allowed shadow-sm">
                         <i data-lucide="download" class="w-4 h-4"></i>
@@ -55,7 +83,8 @@
                         <i data-lucide="chevron-down" class="w-3.5 h-3.5 ml-1"></i>
                     </button>
                     <!-- Menu Dropdown Format Ekspor -->
-                    <div id="export-dropdown-menu" class="absolute right-0 mt-2 w-52 bg-white border border-slate-200 rounded-xl shadow-xl hidden p-1.5 z-50">
+                    <div id="export-dropdown-menu" class="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-xl hidden p-1.5 z-50">
+                        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 py-1.5">Simpan ke Perangkat</div>
                         <button onclick="generateWord(); closeExportMenu();" class="w-full text-left px-3 py-2.5 text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg flex items-center space-x-2.5">
                             <i data-lucide="file-text" class="w-4 h-4 text-blue-600"></i>
                             <span>Simpan ke Word (.docx)</span>
@@ -68,6 +97,12 @@
                             <i data-lucide="align-left" class="w-4 h-4 text-emerald-600"></i>
                             <span>Simpan Teks Saja (.txt)</span>
                         </button>
+                        <div class="border-t border-slate-100 my-1"></div>
+                        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 py-1.5">Cloud Storage</div>
+                        <button onclick="uploadToGoogleDrive(); closeExportMenu();" class="w-full text-left px-3 py-2.5 text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg flex items-center space-x-2.5">
+                            <i data-lucide="cloud-upload" class="w-4 h-4 text-amber-500"></i>
+                            <span>Upload ke Google Drive</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -77,7 +112,7 @@
     <!-- Main Workspace -->
     <main class="max-w-7xl mx-auto px-4 py-6 flex-1 w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        <!-- Sisi Kiri: Panel Kamera & Kontrol Input -->
+        <!-- Sisi Kiri: Panel Kamera -->
         <div class="lg:col-span-5 flex flex-col space-y-6">
             <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col items-center">
                 <h2 class="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-3 w-full text-left">Pindai / Tambah Halaman</h2>
@@ -110,12 +145,13 @@
                     </label>
                 </div>
             </div>
-
-            <div class="bg-indigo-50 border border-indigo-100 p-4 rounded-2xl flex items-start space-x-3">
-                <i data-lucide="database" class="w-5 h-5 text-indigo-600 shrink-0 mt-0.5"></i>
-                <div class="text-xs text-indigo-900 leading-relaxed">
-                    <span class="font-semibold block mb-1">IndexedDB Storage Aktif:</span>
-                    Semua gambar resolusi penuh dan hasil editan Anda disimpan secara aman di database lokal browser.
+            
+            <!-- Auth Status Info -->
+            <div id="gdrive-status-box" class="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex items-start space-x-3 hidden">
+                <i data-lucide="alert-circle" class="w-5 h-5 text-amber-600 shrink-0 mt-0.5"></i>
+                <div class="text-xs text-amber-900 leading-relaxed">
+                    <span class="font-semibold block mb-1">Google Drive Belum Dikonfigurasi:</span>
+                    Agar bisa menyimpan ke Google Drive, masukkan Client ID & API Key di menu Pengaturan (ikon gir di atas).
                 </div>
             </div>
         </div>
@@ -134,7 +170,7 @@
                     </button>
                 </div>
 
-                <div id="pages-container" class="space-y-4 flex-1 overflow-y-auto max-h-[700px] pr-1">
+                <div id="pages-container" class="space-y-6 flex-1 overflow-y-auto max-h-[750px] pr-2 pb-10">
                     <div id="empty-state" class="text-center py-16 text-slate-400">
                         <i data-lucide="file-question" class="w-12 h-12 mx-auto stroke-1 mb-2 opacity-50"></i>
                         <p class="text-sm">Belum ada halaman yang dipindai.</p>
@@ -143,39 +179,105 @@
                 </div>
             </div>
         </div>
-
     </main>
 
-    <!-- Modal Cropper & Filter Gambar -->
+    <!-- Modal Pengaturan Format & Google Drive -->
+    <div id="settings-modal" class="fixed inset-0 bg-black/70 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-lg rounded-2xl overflow-hidden flex flex-col shadow-2xl">
+            <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                <h3 class="font-bold text-slate-800 flex items-center space-x-2">
+                    <i data-lucide="settings-2" class="w-5 h-5 text-indigo-600"></i>
+                    <span>Pengaturan Format Ekspor & Akun</span>
+                </h3>
+                <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-rose-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            
+            <div class="p-5 overflow-y-auto max-h-[70vh] space-y-6">
+                <!-- Konfigurasi Teks -->
+                <div>
+                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Format Teks Dokumen (Word & PDF)</h4>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-700 mb-1">Jenis Font</label>
+                            <select id="set-font" class="w-full text-sm p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                                <option value="Arial">Arial</option>
+                                <option value="Times New Roman">Times New Roman</option>
+                                <option value="Calibri">Calibri</option>
+                                <option value="Courier New">Courier New</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-700 mb-1">Ukuran Font (pt)</label>
+                            <input type="number" id="set-fontsize" value="12" class="w-full text-sm p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-700 mb-1">Perataan Teks</label>
+                            <select id="set-align" class="w-full text-sm p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                                <option value="left">Rata Kiri (Left)</option>
+                                <option value="center">Rata Tengah (Center)</option>
+                                <option value="right">Rata Kanan (Right)</option>
+                                <option value="justify">Rata Kiri Kanan (Justify)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-700 mb-1">Spasi Baris (Line Spacing)</label>
+                            <select id="set-spacing" class="w-full text-sm p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                                <option value="240">1.0 (Single)</option>
+                                <option value="276">1.15</option>
+                                <option value="360">1.5</option>
+                                <option value="480">2.0 (Double)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="border-slate-100">
+
+                <!-- Konfigurasi Google Drive -->
+                <div>
+                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Integrasi Google Drive API</h4>
+                    <p class="text-xs text-slate-500 mb-3">Masukkan kredensial dari Google Cloud Console agar fitur Upload ke Drive berfungsi.</p>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-700 mb-1">Client ID</label>
+                            <input type="text" id="set-clientid" placeholder="xxxx-xxxx.apps.googleusercontent.com" class="w-full text-sm p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-700 mb-1">API Key</label>
+                            <input type="text" id="set-apikey" placeholder="AIzaSyA..." class="w-full text-sm p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-mono">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 bg-slate-50 border-t border-slate-200 flex justify-end space-x-2">
+                <button onclick="closeSettingsModal()" class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200 rounded-lg transition">Batal</button>
+                <button onclick="saveSettings()" class="px-4 py-2 text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-500 rounded-lg transition">Simpan Pengaturan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Cropper (Tetap Utuh) -->
     <div id="crop-modal" class="fixed inset-0 bg-black/80 z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-2xl rounded-2xl overflow-hidden flex flex-col max-h-[90vh]">
             <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
                 <h3 class="font-bold text-slate-800 flex items-center space-x-2">
                     <i data-lucide="crop" class="w-5 h-5 text-indigo-600"></i>
-                    <span>Sesuaikan & Potong Halaman Buku</span>
+                    <span>Sesuaikan & Potong Halaman</span>
                 </h3>
                 <button onclick="closeCropModal()" class="text-slate-400 hover:text-rose-600"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
-            
             <div class="p-4 flex-1 overflow-hidden bg-slate-900 flex items-center justify-center">
                 <img id="crop-image-element" class="max-h-[50vh] block" alt="Crop Target">
             </div>
-
             <div class="p-3 bg-slate-100 border-t border-slate-200 flex flex-wrap gap-2 justify-between items-center">
                 <div class="flex space-x-2">
-                    <button onclick="cropperInstance.rotate(-90)" class="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium hover:bg-slate-50 flex items-center space-x-1">
-                        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i><span>Putar Kiri</span>
-                    </button>
-                    <button onclick="cropperInstance.rotate(90)" class="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium hover:bg-slate-50 flex items-center space-x-1">
-                        <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i><span>Putar Kanan</span>
-                    </button>
-                    <button onclick="applyFilterBw()" class="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium hover:bg-slate-50 flex items-center space-x-1">
-                        <i data-lucide="wand-2" class="w-3.5 h-3.5 text-indigo-600"></i><span>B&W Filter</span>
-                    </button>
+                    <button onclick="cropperInstance.rotate(-90)" class="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium hover:bg-slate-50 flex items-center space-x-1"><i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i><span>Putar</span></button>
+                    <button onclick="applyFilterBw()" class="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium hover:bg-slate-50 flex items-center space-x-1"><i data-lucide="wand-2" class="w-3.5 h-3.5 text-indigo-600"></i><span>B&W</span></button>
                 </div>
                 <div class="flex space-x-2">
                     <button onclick="closeCropModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-medium">Batal</button>
-                    <button onclick="saveCroppedImage()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-medium">Terapkan & Proses OCR</button>
+                    <button onclick="saveCroppedImage()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-medium">Proses OCR</button>
                 </div>
             </div>
         </div>
@@ -183,29 +285,120 @@
 
     <!-- Script Utama -->
     <script>
+        // ==== STATE & VARIABEL ====
         let db = null;
         let videoStream = null;
         let isCameraActive = false;
         let cropperInstance = null;
-        let activeCropBlobUrl = null;
         let pages = [];
+        let quillEditors = {}; // Menyimpan instance Quill tiap halaman
 
+        // Pengaturan Default
+        let appSettings = {
+            font: 'Arial',
+            fontSize: 12, // dalam point
+            align: 'left',
+            spacing: 240,
+            clientId: '',
+            apiKey: ''
+        };
+
+        // Google API vars
+        let tokenClient;
+        let gapiInited = false;
+        let gisInited = false;
+        const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+
+        // Elements
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const cameraPlaceholder = document.getElementById('camera-placeholder');
         const btnStartCam = document.getElementById('btn-start-cam');
         const btnCapture = document.getElementById('btn-capture');
-        const camBtnText = document.getElementById('cam-btn-text');
         const pagesContainer = document.getElementById('pages-container');
         const emptyState = document.getElementById('empty-state');
-        const totalPagesEl = document.getElementById('total-pages');
-        const pageCountBadge = document.getElementById('page-count-badge');
         const btnGlobalDownload = document.getElementById('btn-global-download');
         const exportDropdownMenu = document.getElementById('export-dropdown-menu');
-        const cropModal = document.getElementById('crop-modal');
-        const cropImageElement = document.getElementById('crop-image-element');
+        const settingsModal = document.getElementById('settings-modal');
+        const gdriveStatusBox = document.getElementById('gdrive-status-box');
 
-        // ==== LOGIKA DOWNLOAD NATIVE (Pengganti FileSaver) ====
+        // ==== MANAJEMEN PENGATURAN ====
+        function loadSettings() {
+            const saved = localStorage.getItem('bulkbook_settings');
+            if (saved) {
+                appSettings = { ...appSettings, ...JSON.parse(saved) };
+            }
+            // Populate form
+            document.getElementById('set-font').value = appSettings.font;
+            document.getElementById('set-fontsize').value = appSettings.fontSize;
+            document.getElementById('set-align').value = appSettings.align;
+            document.getElementById('set-spacing').value = appSettings.spacing;
+            document.getElementById('set-clientid').value = appSettings.clientId;
+            document.getElementById('set-apikey').value = appSettings.apiKey;
+
+            checkGDriveConfig();
+        }
+
+        function saveSettings() {
+            appSettings.font = document.getElementById('set-font').value;
+            appSettings.fontSize = parseInt(document.getElementById('set-fontsize').value);
+            appSettings.align = document.getElementById('set-align').value;
+            appSettings.spacing = parseInt(document.getElementById('set-spacing').value);
+            appSettings.clientId = document.getElementById('set-clientid').value.trim();
+            appSettings.apiKey = document.getElementById('set-apikey').value.trim();
+            
+            localStorage.setItem('bulkbook_settings', JSON.stringify(appSettings));
+            closeSettingsModal();
+            checkGDriveConfig();
+            initGoogleAPI(); // Re-init jika key berubah
+            alert("Pengaturan Format & Akun berhasil disimpan.");
+        }
+
+        function openSettingsModal() { settingsModal.classList.remove('hidden'); }
+        function closeSettingsModal() { settingsModal.classList.add('hidden'); }
+        
+        function checkGDriveConfig() {
+            if (!appSettings.clientId || !appSettings.apiKey) {
+                gdriveStatusBox.classList.remove('hidden');
+            } else {
+                gdriveStatusBox.classList.add('hidden');
+            }
+        }
+
+        // ==== GOOGLE DRIVE API INITIALIZATION ====
+        function gapiLoaded() {
+            gapi.load('client', initializeGapiClient);
+        }
+
+        async function initializeGapiClient() {
+            if(!appSettings.apiKey) return;
+            try {
+                await gapi.client.init({
+                    apiKey: appSettings.apiKey,
+                    discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
+                });
+                gapiInited = true;
+            } catch (err) {
+                console.error("GAPI Init error", err);
+            }
+        }
+
+        function gisLoaded() {
+            if(!appSettings.clientId) return;
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: appSettings.clientId,
+                scope: SCOPES,
+                callback: '', // defined at request time
+            });
+            gisInited = true;
+        }
+
+        function initGoogleAPI() {
+            if (typeof gapi !== 'undefined') gapiLoaded();
+            if (typeof google !== 'undefined') gisLoaded();
+        }
+
+        // ==== LOGIKA UI DROPDOWN & NATIVE DOWNLOAD ====
         function triggerNativeDownload(blob, filename) {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -214,13 +407,9 @@
             a.download = filename;
             document.body.appendChild(a);
             a.click();
-            setTimeout(() => {
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-            }, 100);
+            setTimeout(() => { window.URL.revokeObjectURL(url); document.body.removeChild(a); }, 100);
         }
 
-        // ==== LOGIKA DROPDOWN EKSPOR ====
         function toggleExportMenu(event) {
             event.stopPropagation();
             exportDropdownMenu.classList.toggle('hidden');
@@ -231,21 +420,15 @@
         }
 
         window.addEventListener('click', (e) => {
-            if (!document.getElementById('btn-global-download').contains(e.target) && !exportDropdownMenu.contains(e.target)) {
-                closeExportMenu();
-            }
+            if (!btnGlobalDownload.contains(e.target) && !exportDropdownMenu.contains(e.target)) closeExportMenu();
         });
 
-        // ==== LOGIKA DATABASE & KAMERA (TIDAK ADA YANG DIUBAH) ====
+        // ==== LOGIKA INDEXEDDB ====
         function initDB() {
             return new Promise((resolve, reject) => {
-                const request = indexedDB.open('BulkBookScannerDB', 1);
+                const request = indexedDB.open('BulkBookScannerDB', 2);
                 request.onerror = e => reject(e);
-                request.onsuccess = e => {
-                    db = e.target.result;
-                    loadPagesFromDB();
-                    resolve(db);
-                };
+                request.onsuccess = e => { db = e.target.result; loadPagesFromDB(); resolve(db); };
                 request.onupgradeneeded = e => {
                     const database = e.target.result;
                     if (!database.objectStoreNames.contains('pages')) {
@@ -254,7 +437,6 @@
                 };
             });
         }
-
         function dbSavePage(pageObj) {
             return new Promise((resolve, reject) => {
                 if (!db) return resolve();
@@ -301,10 +483,13 @@
         }
 
         window.addEventListener('DOMContentLoaded', async () => {
+            loadSettings(); // Memuat pengaturan font & API key dari LocalStorage
+            initGoogleAPI(); // Menyiapkan Google Drive
             try { await initDB(); } catch (err) { console.error("DB Init error", err); }
             lucide.createIcons();
         });
 
+        // ==== LOGIKA KAMERA ====
         async function toggleCamera() {
             if (isCameraActive) {
                 stopCamera();
@@ -322,7 +507,7 @@
                 video.classList.remove('hidden');
                 cameraPlaceholder.classList.add('hidden');
                 btnCapture.disabled = false;
-                camBtnText.textContent = 'Tutup Kamera';
+                document.getElementById('cam-btn-text').textContent = 'Tutup Kamera';
                 isCameraActive = true;
             } catch (err) {
                 alert('Tidak dapat mengakses kamera: ' + err.message);
@@ -336,7 +521,7 @@
             }
             video.classList.add('hidden');
             btnCapture.disabled = true;
-            camBtnText.textContent = 'Buka Kamera';
+            document.getElementById('cam-btn-text').textContent = 'Buka Kamera';
             isCameraActive = false;
             if (pages.length === 0) {
                 cameraPlaceholder.classList.remove('hidden');
@@ -373,10 +558,11 @@
             event.target.value = '';
         }
 
+        // ==== LOGIKA CROPPER & FILTER ====
         function openCropModal(imageUrl) {
-            activeCropBlobUrl = imageUrl;
+            const cropImageElement = document.getElementById('crop-image-element');
             cropImageElement.src = imageUrl;
-            cropModal.classList.remove('hidden');
+            document.getElementById('crop-modal').classList.remove('hidden');
             if (cropperInstance) cropperInstance.destroy();
             cropperInstance = new Cropper(cropImageElement, {
                 aspectRatio: NaN,
@@ -386,7 +572,7 @@
         }
 
         function closeCropModal() {
-            cropModal.classList.add('hidden');
+            document.getElementById('crop-modal').classList.add('hidden');
             if (cropperInstance) {
                 cropperInstance.destroy();
                 cropperInstance = null;
@@ -395,6 +581,7 @@
 
         function applyFilterBw() {
             if (!cropperInstance) return;
+            const cropImageElement = document.getElementById('crop-image-element');
             const croppedCanvas = cropperInstance.getCroppedCanvas();
             const ctx = croppedCanvas.getContext('2d');
             const imgData = ctx.getImageData(0, 0, croppedCanvas.width, croppedCanvas.height);
@@ -420,6 +607,7 @@
             await addNewPageToDB(dataUrl);
         }
 
+        // ==== LOGIKA OCR & MANAJEMEN HALAMAN ====
         async function addNewPageToDB(dataUrl) {
             const pageId = 'page_' + Date.now() + Math.random().toString(36).substring(2, 7);
             const newPage = {
@@ -442,23 +630,18 @@
                 const worker = await Tesseract.createWorker(selectedLang);
                 const ret = await worker.recognize(pageObj.imageDataUrl);
                 
-                pageObj.text = ret.data.text;
+                // Konversi baris teks Tesseract menjadi paragraf HTML untuk editor Quill
+                const htmlText = ret.data.text.split('\n').filter(p => p.trim() !== '').map(p => `<p>${p}</p>`).join('');
+                
+                pageObj.text = htmlText;
                 pageObj.status = 'done';
                 await worker.terminate();
             } catch (err) {
-                pageObj.text = '[Gagal membaca teks pada gambar ini]';
+                pageObj.text = '<p>[Gagal membaca teks pada gambar ini]</p>';
                 pageObj.status = 'error';
             }
             await dbSavePage(pageObj);
             renderPagesUI();
-        }
-
-        async function updatePageText(pageId, newText) {
-            const page = pages.find(p => p.id === pageId);
-            if (page) {
-                page.text = newText;
-                await dbSavePage(page);
-            }
         }
 
         async function removePage(pageId) {
@@ -490,7 +673,14 @@
             renderPagesUI();
         }
 
+        // ==== RENDERING UI (DENGAN QUILL EDITOR) ====
         function renderPagesUI() {
+            const totalPagesEl = document.getElementById('total-pages');
+            const pageCountBadge = document.getElementById('page-count-badge');
+            const btnGlobalDownload = document.getElementById('btn-global-download');
+            const emptyState = document.getElementById('empty-state');
+            const pagesContainer = document.getElementById('pages-container');
+
             totalPagesEl.textContent = pages.length;
             pageCountBadge.textContent = pages.length;
             btnGlobalDownload.disabled = pages.length === 0;
@@ -499,13 +689,16 @@
                 emptyState.classList.remove('hidden');
                 pagesContainer.innerHTML = '';
                 pagesContainer.appendChild(emptyState);
-                if (!isCameraActive) cameraPlaceholder.classList.remove('hidden');
+                if (!isCameraActive) document.getElementById('camera-placeholder').classList.remove('hidden');
                 lucide.createIcons();
                 return;
             }
 
             emptyState.classList.add('hidden');
             let htmlContent = '';
+
+            // Hapus referensi editor lama
+            quillEditors = {};
 
             pages.forEach((page, index) => {
                 let statusBadge = '';
@@ -515,130 +708,252 @@
                         Memproses OCR...
                     </span>`;
                 } else if (page.status === 'done') {
-                    statusBadge = `<span class="inline-flex items-center space-x-1 text-xs text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-medium">
-                        <i data-lucide="check" class="w-3 h-3"></i> Selesai
-                    </span>`;
+                    statusBadge = `<span class="inline-flex items-center space-x-1 text-xs text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-medium"><i data-lucide="check" class="w-3 h-3"></i> Selesai</span>`;
                 } else {
                     statusBadge = `<span class="text-xs text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full font-medium">Gagal OCR</span>`;
                 }
 
                 htmlContent += `
-                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col md:flex-row gap-4 items-start">
-                        <div class="w-full md:w-32 aspect-[3/4] bg-slate-900 rounded-lg overflow-hidden shrink-0 relative shadow-sm">
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col xl:flex-row gap-5 items-start">
+                        <div class="w-full xl:w-48 aspect-[3/4] bg-slate-900 rounded-lg overflow-hidden shrink-0 relative shadow-sm">
                             <img src="${page.imageDataUrl}" class="w-full h-full object-cover" alt="Scan ${index + 1}">
                             <span class="absolute top-2 left-2 bg-black/60 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">Hal. ${index + 1}</span>
                         </div>
-                        <div class="flex-1 w-full flex flex-col space-y-2">
+                        <div class="flex-1 w-full flex flex-col space-y-3">
                             <div class="flex justify-between items-center">
                                 <div class="flex items-center space-x-2">
                                     <span class="font-semibold text-sm text-slate-700">Halaman ${index + 1}</span>
                                     ${statusBadge}
                                 </div>
-                                <div class="flex items-center space-x-1">
-                                    <button onclick="movePage(${index}, -1)" ${index === 0 ? 'disabled' : ''} class="text-slate-400 hover:text-indigo-600 p-1 disabled:opacity-30"><i data-lucide="arrow-up" class="w-4 h-4"></i></button>
-                                    <button onclick="movePage(${index}, 1)" ${index === pages.length - 1 ? 'disabled' : ''} class="text-slate-400 hover:text-indigo-600 p-1 disabled:opacity-30"><i data-lucide="arrow-down" class="w-4 h-4"></i></button>
-                                    <button onclick="removePage('${page.id}')" class="text-slate-400 hover:text-rose-600 p-1 transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                <div class="flex items-center space-x-1 bg-white border border-slate-200 rounded-lg p-0.5 shadow-sm">
+                                    <button onclick="movePage(${index}, -1)" ${index === 0 ? 'disabled' : ''} class="text-slate-400 hover:text-indigo-600 p-1.5 disabled:opacity-30 rounded hover:bg-slate-50"><i data-lucide="arrow-up" class="w-4 h-4"></i></button>
+                                    <button onclick="movePage(${index}, 1)" ${index === pages.length - 1 ? 'disabled' : ''} class="text-slate-400 hover:text-indigo-600 p-1.5 disabled:opacity-30 rounded hover:bg-slate-50"><i data-lucide="arrow-down" class="w-4 h-4"></i></button>
+                                    <div class="w-px h-4 bg-slate-200 mx-1"></div>
+                                    <button onclick="removePage('${page.id}')" class="text-slate-400 hover:text-rose-600 p-1.5 transition rounded hover:bg-slate-50"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                                 </div>
                             </div>
-                            <textarea oninput="updatePageText('${page.id}', this.value)" rows="5" class="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y" placeholder="Teks hasil scan...">${page.text}</textarea>
+                            
+                            <!-- Container Rich Text Editor -->
+                            <div class="bg-white shadow-sm rounded-lg border border-slate-200 flex flex-col">
+                                <div id="editor-${page.id}">${page.text}</div>
+                            </div>
                         </div>
                     </div>
                 `;
             });
 
             pagesContainer.innerHTML = htmlContent;
+
+            // Inisialisasi Quill Editor untuk setiap halaman
+            pages.forEach(page => {
+                const editorElement = document.getElementById(`editor-${page.id}`);
+                if (editorElement) {
+                    const quill = new Quill(editorElement, {
+                        theme: 'snow',
+                        modules: {
+                            toolbar: [
+                                ['bold', 'italic', 'underline'],
+                                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                                ['clean']
+                            ]
+                        },
+                        placeholder: 'Teks hasil scan akan muncul di sini...'
+                    });
+                    
+                    // Simpan perubahan teks dari Quill ke database (debounce agar tidak lag)
+                    let timeout;
+                    quill.on('text-change', function() {
+                        clearTimeout(timeout);
+                        timeout = setTimeout(async () => {
+                            const updatedPage = pages.find(p => p.id === page.id);
+                            if (updatedPage) {
+                                updatedPage.text = quill.root.innerHTML;
+                                await dbSavePage(updatedPage);
+                            }
+                        }, 500);
+                    });
+
+                    quillEditors[page.id] = quill;
+                }
+            });
+
             lucide.createIcons();
         }
 
-        // ==== LOGIKA EKSPOR DENGAN PENANGANAN ERROR ====
+        // ==== LOGIKA PARSER HTML KE DOCX ====
+        // Mengonversi HTML dari Quill ke struktur paragraf Word
+        function convertHtmlToDocxElements(htmlString, docxInstance) {
+            const { Paragraph, TextRun, AlignmentType } = docxInstance;
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = htmlString;
+            let docElements = [];
+
+            // Ambil pengaturan
+            const fontName = appSettings.font;
+            const fontSize = appSettings.fontSize * 2; // docx menggunakan half-points
+            
+            let docxAlign = AlignmentType.LEFT;
+            if (appSettings.align === 'center') docxAlign = AlignmentType.CENTER;
+            if (appSettings.align === 'right') docxAlign = AlignmentType.RIGHT;
+            if (appSettings.align === 'justify') docxAlign = AlignmentType.JUSTIFIED;
+
+            const spacingCfg = { line: appSettings.spacing };
+
+            // Loop setiap block (paragraf/list) dari HTML
+            Array.from(tempDiv.childNodes).forEach(node => {
+                if (node.nodeName === 'P' || node.nodeName === 'H1' || node.nodeName === 'H2') {
+                    let runs = [];
+                    parseHtmlRuns(node, runs, { bold: false, italic: false, underline: false });
+                    
+                    docElements.push(new Paragraph({
+                        children: createTextRuns(runs, TextRun, fontName, fontSize),
+                        alignment: docxAlign,
+                        spacing: spacingCfg
+                    }));
+                } else if (node.nodeName === 'UL' || node.nodeName === 'OL') {
+                    Array.from(node.childNodes).forEach(li => {
+                        if (li.nodeName === 'LI') {
+                            let runs = [];
+                            parseHtmlRuns(li, runs, { bold: false, italic: false, underline: false });
+                            docElements.push(new Paragraph({
+                                children: createTextRuns(runs, TextRun, fontName, fontSize),
+                                alignment: docxAlign,
+                                spacing: spacingCfg,
+                                bullet: { level: 0 } // Standar list
+                            }));
+                        }
+                    });
+                }
+            });
+
+            return docElements;
+        }
+
+        function parseHtmlRuns(node, runsArray, currentStyle) {
+            node.childNodes.forEach(child => {
+                if (child.nodeType === Node.TEXT_NODE) {
+                    if (child.textContent.replace(/\u200B/g, '').length > 0) {
+                        runsArray.push({ text: child.textContent, ...currentStyle });
+                    }
+                } else {
+                    let newStyle = { ...currentStyle };
+                    if (child.nodeName === 'STRONG' || child.nodeName === 'B') newStyle.bold = true;
+                    if (child.nodeName === 'EM' || child.nodeName === 'I') newStyle.italic = true;
+                    if (child.nodeName === 'U') newStyle.underline = true;
+                    parseHtmlRuns(child, runsArray, newStyle);
+                }
+            });
+        }
+
+        function createTextRuns(runsArray, TextRunClass, fontName, fontSize) {
+            return runsArray.map(r => new TextRunClass({
+                text: r.text,
+                bold: r.bold,
+                italics: r.italic,
+                underline: r.underline ? {} : undefined,
+                font: fontName,
+                size: fontSize
+            }));
+        }
+
         function dataURLToArrayBuffer(dataURL) {
             const BASE64_MARKER = ';base64,';
             const base64Index = dataURL.indexOf(BASE64_MARKER) + BASE64_MARKER.length;
             const base64 = dataURL.substring(base64Index);
             const raw = window.atob(base64);
-            const rawLength = raw.length;
-            const array = new Uint8Array(new ArrayBuffer(rawLength));
-            for(let i = 0; i < rawLength; i++) {
-                array[i] = raw.charCodeAt(i);
-            }
+            const array = new Uint8Array(new ArrayBuffer(raw.length));
+            for(let i = 0; i < raw.length; i++) array[i] = raw.charCodeAt(i);
             return array.buffer;
         }
 
-        async function generateWord() {
-    if (pages.length === 0) return;
+        // ==== EKSPOR & UPLOAD API ====
 
-    // --- TAMBAHKAN BLOK PENGAMAN INI ---
-    if (typeof window.docx === 'undefined') {
-        alert('Gagal mengekspor: Sistem pembuat Word belum selesai dimuat oleh browser. Pastikan koneksi lancar, lalu refresh (muat ulang) halaman ini.');
-        return;
-    }
-    // -----------------------------------
+        // Buat file Blob Word
+        async function buildWordBlob() {
+            if (typeof window.docx === 'undefined') {
+                alert('Pustaka Word belum siap, pastikan koneksi lancar lalu refresh halaman.');
+                return null;
+            }
+            const { Document, Packer, Paragraph, TextRun, ImageRun, PageBreak } = window.docx;
+            let docSections = [];
 
-    try {
-                const { Document, Packer, Paragraph, TextRun, ImageRun, PageBreak } = window.docx;
-                let docSections = [];
-
-                pages.forEach((page, index) => {
-                    const imageArrayBuffer = dataURLToArrayBuffer(page.imageDataUrl);
-                    
-                    // Pastikan teks tidak null/undefined sebelum dipecah
-                    const safeText = page.text || "";
-                    const textLines = safeText.split('\n');
-                    
-                    let pageChildren = [
-                        new Paragraph({
-                            children: [new TextRun({ text: `Halaman ${index + 1}`, bold: true, size: 28, color: "4F46E5" })],
-                            spacing: { after: 150 }
-                        }),
-                        // Penempatan Gambar Halaman Asli di Atas Teks
-                        new Paragraph({
-                            children: [new ImageRun({ data: imageArrayBuffer, transformation: { width: 300, height: 400 } })],
-                            spacing: { after: 200 }
-                        }),
-                        
-                    ];
-
-                    textLines.forEach(line => {
-                        if (line.trim() !== "") {
-                            pageChildren.push(new Paragraph({ children: [new TextRun({ text: line, size: 22 })], spacing: { after: 100 } }));
-                        }
-                    });
-
-                    if (index < pages.length - 1) {
-                        pageChildren.push(new Paragraph({ children: [new PageBreak()] }));
-                    }
-
-                    docSections.push({ properties: {}, children: pageChildren });
-                });
-
-                const doc = new Document({ sections: docSections });
-                const blob = await Packer.toBlob(doc);
+            pages.forEach((page, index) => {
+                const imageArrayBuffer = dataURLToArrayBuffer(page.imageDataUrl);
                 
-                // Gunakan fungsi native download anti gagal
-                triggerNativeDownload(blob, "hasil-scan-ultimate.docx");
+                // Tambahkan Gambar Asli & Header Halaman
+                let pageChildren = [
+                    new Paragraph({ children: [new TextRun({ text: `Halaman ${index + 1}`, bold: true, size: 28, color: "4F46E5" })], spacing: { after: 150 } }),
+                    new Paragraph({ children: [new ImageRun({ data: imageArrayBuffer, transformation: { width: 300, height: 400 } })], spacing: { after: 200 } }),
+                    
+                ];
+
+                // Parsing HTML dari Quill menggunakan pengaturan font & alignment
+                const textElements = convertHtmlToDocxElements(page.text || "", window.docx);
+                pageChildren.push(...textElements);
+
+                if (index < pages.length - 1) {
+                    pageChildren.push(new Paragraph({ children: [new PageBreak()] }));
+                }
+
+                docSections.push({ properties: {}, children: pageChildren });
+            });
+
+            const doc = new Document({ sections: docSections });
+            return await Packer.toBlob(doc);
+        }
+
+        async function generateWord() {
+            if (pages.length === 0) return;
+            try {
+                const blob = await buildWordBlob();
+                if(blob) triggerNativeDownload(blob, "hasil-scan-ultimate.docx");
             } catch (err) {
                 console.error(err);
-                alert('Terjadi kesalahan saat memproses Word: ' + err.message);
+                alert('Gagal memproses Word: ' + err.message);
             }
         }
 
         function generatePDF() {
             if (pages.length === 0) return;
+            if (typeof pdfMake === 'undefined' || typeof htmlToPdfmake === 'undefined') {
+                alert('Pustaka PDF belum siap.'); return;
+            }
+
             try {
                 let contentDef = [];
+
+                // Konversi pengaturan ke standar PDFMake
+                let pdfAlignment = appSettings.align;
+                if(pdfAlignment === 'justify') pdfAlignment = 'justify';
+                let pdfSpacing = 1;
+                if (appSettings.spacing == "276") pdfSpacing = 1.15;
+                if (appSettings.spacing == "360") pdfSpacing = 1.5;
+                if (appSettings.spacing == "480") pdfSpacing = 2.0;
+
                 pages.forEach((page, index) => {
                     if (index > 0) contentDef.push({ text: '', pageBreak: 'before' });
                     contentDef.push({ text: `Halaman ${index + 1}`, fontSize: 18, bold: true, color: '#4F46E5', margin: [0, 0, 0, 10] });
                     contentDef.push({ image: page.imageDataUrl, width: 200, margin: [0, 0, 0, 15] });
                     contentDef.push({ text: 'Teks Hasil Ekstraksi:', fontSize: 12, bold: true, margin: [0, 0, 0, 5] });
-                    contentDef.push({ text: page.text || "", fontSize: 11, margin: [0, 0, 0, 10] });
+                    
+                    // Gunakan htmlToPdfmake untuk merender formatting Quill
+                    const parsedHtml = htmlToPdfmake(page.text || "", {
+                        defaultStyles: {
+                            p: { fontSize: appSettings.fontSize, alignment: pdfAlignment, lineHeight: pdfSpacing, margin: [0, 5, 0, 5] },
+                            li: { fontSize: appSettings.fontSize, alignment: pdfAlignment, lineHeight: pdfSpacing }
+                        }
+                    });
+                    contentDef.push(parsedHtml);
                 });
 
-                const docDefinition = { content: contentDef };
+                const docDefinition = { 
+                    content: contentDef,
+                    defaultStyle: { font: 'Roboto' } // Font default pdfmake
+                };
                 pdfMake.createPdf(docDefinition).download('hasil-scan-ultimate.pdf');
             } catch (err) {
                 console.error(err);
-                alert('Terjadi kesalahan saat memproses PDF: ' + err.message);
+                alert('Gagal memproses PDF: ' + err.message);
             }
         }
 
@@ -647,13 +962,72 @@
             try {
                 let fullText = "";
                 pages.forEach((page, index) => {
-                    fullText += `=== HALAMAN ${index + 1} ===\n\n${page.text || ""}\n\n\n`;
+                    // Ekstrak teks murni tanpa tag HTML dari Quill API
+                    const quillInst = quillEditors[page.id];
+                    const plainText = quillInst ? quillInst.getText() : "";
+                    fullText += `=== HALAMAN ${index + 1} ===\n\n${plainText}\n\n`;
                 });
                 const blob = new Blob([fullText], { type: "text/plain;charset=utf-8" });
                 triggerNativeDownload(blob, "hasil-scan-ultimate.txt");
             } catch (err) {
                 console.error(err);
-                alert('Terjadi kesalahan saat memproses TXT: ' + err.message);
+                alert('Gagal memproses TXT: ' + err.message);
+            }
+        }
+
+        async function uploadToGoogleDrive() {
+            if (pages.length === 0) return;
+            if (!gapiInited || !gisInited || !appSettings.clientId || !appSettings.apiKey) {
+                alert("Google Drive API belum dikonfigurasi. Silakan buka menu pengaturan (ikon gir) dan masukkan Client ID & API Key Anda.");
+                openSettingsModal();
+                return;
+            }
+
+            tokenClient.callback = async (resp) => {
+                if (resp.error !== undefined) {
+                    alert('Gagal login ke Google: ' + resp.error);
+                    return;
+                }
+                
+                document.getElementById('btn-global-download').innerHTML = '<span class="animate-pulse">Mengupload...</span>';
+                
+                try {
+                    const blob = await buildWordBlob();
+                    if(!blob) return;
+
+                    const metadata = {
+                        'name': 'Buku_Hasil_Scan_Ultimate.docx',
+                        'mimeType': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                    };
+
+                    const form = new FormData();
+                    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                    form.append('file', blob);
+
+                    const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                        method: 'POST',
+                        headers: new Headers({ 'Authorization': 'Bearer ' + resp.access_token }),
+                        body: form
+                    });
+
+                    const val = await res.json();
+                    if(val.id) {
+                        alert("Berhasil! Dokumen Word Anda telah tersimpan di Google Drive.");
+                    } else {
+                        throw new Error("Gagal mendapatkan ID file dari Google");
+                    }
+                } catch(err) {
+                    alert("Error saat mengupload: " + err.message);
+                } finally {
+                    document.getElementById('btn-global-download').innerHTML = `<i data-lucide="download" class="w-4 h-4"></i><span>Ekspor (<span id="page-count-badge">${pages.length}</span>)</span><i data-lucide="chevron-down" class="w-3.5 h-3.5 ml-1"></i>`;
+                    lucide.createIcons();
+                }
+            };
+
+            if (gapi.client.getToken() === null) {
+                tokenClient.requestAccessToken({prompt: 'consent'});
+            } else {
+                tokenClient.requestAccessToken({prompt: ''});
             }
         }
     </script>
