@@ -6,14 +6,14 @@
     <title>Bulk Book Scanner Pro Ultimate</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <!-- Tesseract.js untuk OCR -->
+    <!-- Tesseract.js -->
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
-    <!-- Cropper.js untuk Pemotongan & Rotasi Gambar -->
+    <!-- Cropper.js -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
-    <!-- Docx.js untuk Generate Word -->
+    <!-- Docx.js -->
     <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.js"></script>
-    <!-- pdfmake untuk Generate PDF -->
+    <!-- pdfmake & vfs_fonts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
     <!-- FileSaver.js -->
@@ -84,7 +84,6 @@
             <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col items-center">
                 <h2 class="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-3 w-full text-left">Pindai / Tambah Halaman</h2>
                 
-                <!-- Viewport Kamera / Pratinjau -->
                 <div class="relative w-full aspect-[3/4] bg-slate-900 rounded-xl overflow-hidden flex items-center justify-center mb-4 shadow-inner">
                     <video id="video" autoplay playsinline class="w-full h-full object-cover hidden"></video>
                     <canvas id="canvas" class="hidden"></canvas>
@@ -94,7 +93,6 @@
                     </div>
                 </div>
 
-                <!-- Tombol Aksi Kamera & Upload -->
                 <div class="grid grid-cols-2 gap-2 w-full">
                     <button id="btn-start-cam" onclick="toggleCamera()" class="flex items-center justify-center space-x-2 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl transition text-sm font-medium">
                         <i data-lucide="video" class="w-4 h-4"></i>
@@ -115,12 +113,11 @@
                 </div>
             </div>
 
-            <!-- Status Database Info -->
             <div class="bg-indigo-50 border border-indigo-100 p-4 rounded-2xl flex items-start space-x-3">
-                <i data-lucide="database" class="w-5 h-5 text-indigo-600 shrink-0 mt-0.5">Brun</i>
+                <i data-lucide="database" class="w-5 h-5 text-indigo-600 shrink-0 mt-0.5"></i>
                 <div class="text-xs text-indigo-900 leading-relaxed">
                     <span class="font-semibold block mb-1">IndexedDB Storage Aktif:</span>
-                    Semua gambar resolusi penuh dan hasil editan Anda disimpan secara aman di database lokal browser. Tidak ada risiko kepenuhan memori seperti localStorage.
+                    Semua gambar resolusi penuh dan hasil editan Anda disimpan secara aman di database lokal browser.
                 </div>
             </div>
         </div>
@@ -139,7 +136,6 @@
                     </button>
                 </div>
 
-                <!-- Daftar Halaman Container -->
                 <div id="pages-container" class="space-y-4 flex-1 overflow-y-auto max-h-[700px] pr-1">
                     <div id="empty-state" class="text-center py-16 text-slate-400">
                         <i data-lucide="file-question" class="w-12 h-12 mx-auto stroke-1 mb-2 opacity-50"></i>
@@ -167,7 +163,6 @@
                 <img id="crop-image-element" class="max-h-[50vh] block" alt="Crop Target">
             </div>
 
-            <!-- Toolbar Filter & Rotasi di Modal -->
             <div class="p-3 bg-slate-100 border-t border-slate-200 flex flex-wrap gap-2 justify-between items-center">
                 <div class="flex space-x-2">
                     <button onclick="cropperInstance.rotate(-90)" class="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium hover:bg-slate-50 flex items-center space-x-1">
@@ -195,6 +190,7 @@
         let isCameraActive = false;
         let cropperInstance = null;
         let activeCropBlobUrl = null;
+        let pages = [];
 
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
@@ -210,7 +206,6 @@
         const cropModal = document.getElementById('crop-modal');
         const cropImageElement = document.getElementById('crop-image-element');
 
-        // Inisialisasi IndexedDB
         function initDB() {
             return new Promise((resolve, reject) => {
                 const request = indexedDB.open('BulkBookScannerDB', 1);
@@ -229,9 +224,9 @@
             });
         }
 
-        // Operasi Database
         function dbSavePage(pageObj) {
             return new Promise((resolve, reject) => {
+                if (!db) return resolve();
                 const tx = db.transaction('pages', 'readwrite');
                 const store = tx.objectStore('pages');
                 store.put(pageObj);
@@ -242,6 +237,7 @@
 
         function dbDeletePage(pageId) {
             return new Promise((resolve, reject) => {
+                if (!db) return resolve();
                 const tx = db.transaction('pages', 'readwrite');
                 const store = tx.objectStore('pages');
                 store.delete(pageId);
@@ -252,6 +248,7 @@
 
         function dbClearAll() {
             return new Promise((resolve, reject) => {
+                if (!db) return resolve();
                 const tx = db.transaction('pages', 'readwrite');
                 const store = tx.objectStore('pages');
                 store.clear();
@@ -261,6 +258,7 @@
         }
 
         async function loadPagesFromDB() {
+            if (!db) return;
             const tx = db.transaction('pages', 'readonly');
             const store = tx.objectStore('pages');
             const request = store.getAll();
@@ -271,14 +269,15 @@
             };
         }
 
-        let pages = [];
-
         window.addEventListener('DOMContentLoaded', async () => {
-            await initDB();
+            try {
+                await initDB();
+            } catch (err) {
+                console.error("Gagal inisialisasi IndexedDB:", err);
+            }
             lucide.createIcons();
         });
 
-        // Toggle Kamera
         async function toggleCamera() {
             if (isCameraActive) {
                 stopCamera();
@@ -333,7 +332,6 @@
             const files = event.target.files;
             if (!files.length) return;
             
-            // Proses file pertama ke modal crop, sisanya langsung masukkan
             Array.from(files).forEach((file, idx) => {
                 const reader = new FileReader();
                 reader.onload = function(e) {
@@ -348,7 +346,6 @@
             event.target.value = '';
         }
 
-        // Modal Cropper Handler
         function openCropModal(imageUrl) {
             activeCropBlobUrl = imageUrl;
             cropImageElement.src = imageUrl;
@@ -377,7 +374,7 @@
             const data = imgData.data;
             for (let i = 0; i < data.length; i += 4) {
                 let avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
-                let contrast = avg > 128 ? 255 : 0; // Simple threshold black & white
+                let contrast = avg > 128 ? 255 : 0;
                 data[i] = contrast;
                 data[i + 1] = contrast;
                 data[i + 2] = contrast;
@@ -412,7 +409,6 @@
             processQueueOCR(newPage);
         }
 
-        // Proses OCR per Halaman
         async function processQueueOCR(pageObj) {
             try {
                 const selectedLang = document.getElementById('ocr-lang').value;
@@ -440,7 +436,6 @@
 
         async function removePage(pageId) {
             pages = pages.filter(p => p.id !== pageId);
-            // Re-order index
             pages.forEach((p, idx) => p.order = idx);
             await dbDeletePage(pageId);
             for(let p of pages) { await dbSavePage(p); }
@@ -468,7 +463,6 @@
             renderPagesUI();
         }
 
-        // Render UI
         function renderPagesUI() {
             totalPagesEl.textContent = pages.length;
             pageCountBadge.textContent = pages.length;
@@ -542,44 +536,49 @@
             return array.buffer;
         }
 
-        // Ekspor ke Word (.docx)
+        // Format Word (.docx)
         async function generateWord() {
             if (pages.length === 0) return;
-            const { Document, Packer, Paragraph, TextRun, ImageRun, PageBreak } = window.docx;
-            let docSections = [];
+            if (typeof window.docx === 'undefined') {
+                alert('Pustaka Word belum siap, silakan tunggu beberapa detik dan coba lagi.');
+                return;
+            }
 
-            pages.forEach((page, index) => {
-                const imageArrayBuffer = dataURLToArrayBuffer(page.imageDataUrl);
-                const textLines = page.text.split('\n');
-                
-                let pageChildren = [
-                    new Paragraph({
-                        children: [new TextRun({ text: `Halaman ${index + 1}`, bold: true, size: 28, color: "4F46E5" })],
-                        spacing: { after: 150 }
-                    }),
-                    new Paragraph({
-                        children: [new ImageRun({ data: imageArrayBuffer, transformation: { width: 250, height: 333 } })],
-                        spacing: { after: 200 }
-                    }),
-                    new Paragraph({
-                        children: [new TextRun({ text: "Teks Hasil Ekstraksi (Dapat Diedit):", bold: true, size: 20 })],
-                        spacing: { after: 100 }
-                    })
-                ];
+            try {
+                const { Document, Packer, Paragraph, TextRun, ImageRun, PageBreak } = window.docx;
+                let docSections = [];
 
-                textLines.forEach(line => {
-                    pageChildren.push(new Paragraph({ children: [new TextRun({ text: line, size: 22 })], spacing: { after: 100 } }));
+                pages.forEach((page, index) => {
+                    const imageArrayBuffer = dataURLToArrayBuffer(page.imageDataUrl);
+                    const textLines = (page.text || "").split('\n');
+                    
+                    let pageChildren = [
+                        new Paragraph({
+                            children: [new TextRun({ text: `Halaman ${index + 1}`, bold: true, size: 28, color: "4F46E5" })],
+                            spacing: { after: 150 }
+                        }),
+                        new Paragraph({
+                            children: [new ImageRun({ data: imageArrayBuffer, transformation: { width: 250, height: 333 } })],
+                            spacing: { after: 200 }
+                        }),
+                        new Paragraph({
+                            children: [new TextRun({ text: "Teks Hasil Ekstraksi (Dapat Diedit):", bold: true, size: 20 })],
+                            spacing: { after: 100 }
+                        })
+                    ];
+
+                    textLines.forEach(line => {
+                        pageChildren.push(new Paragraph({ children: [new TextRun({ text: line, size: 22 })], spacing: { after: 100 } }));
+                    });
+
+                    if (index < pages.length - 1) {
+                        pageChildren.push(new Paragraph({ children: [new PageBreak()] }));
+                    }
+
+                    docSections.push({ properties: {}, children: pageChildren });
                 });
 
-                if (index < pages.length - 1) {
-                    pageChildren.push(new Paragraph({ children: [new PageBreak()] }));
-                }
-
-                docSections.push({ properties: {}, children: pageChildren });
-            });
-
-            const doc = new Document({ sections: docSections });
-            try {
+                const doc = new Document({ sections: docSections });
                 const blob = await Packer.toBlob(doc);
                 saveAs(blob, "buku-scan-ultimate.docx");
             } catch (err) {
@@ -587,32 +586,45 @@
             }
         }
 
-        // Ekspor ke PDF (.pdf)
+        // Format PDF (.pdf)
         function generatePDF() {
             if (pages.length === 0) return;
-            let contentDef = [];
+            if (typeof pdfMake === 'undefined') {
+                alert('Pustaka PDF belum siap, silakan tunggu beberapa detik dan coba lagi.');
+                return;
+            }
 
-            pages.forEach((page, index) => {
-                if (index > 0) contentDef.push({ text: '', pageBreak: 'before' });
-                contentDef.push({ text: `Halaman ${index + 1}`, fontSize: 18, bold: true, color: '#4F46E5', margin: [0, 0, 0, 10] });
-                contentDef.push({ image: page.imageDataUrl, width: 200, margin: [0, 0, 0, 15] });
-                contentDef.push({ text: 'Teks Hasil Ekstraksi:', fontSize: 12, bold: true, margin: [0, 0, 0, 5] });
-                contentDef.push({ text: page.text, fontSize: 11, margin: [0, 0, 0, 10] });
-            });
+            try {
+                let contentDef = [];
 
-            const docDefinition = { content: contentDef };
-            pdfMake.createPdf(docDefinition).download('buku-scan-ultimate.pdf');
+                pages.forEach((page, index) => {
+                    if (index > 0) contentDef.push({ text: '', pageBreak: 'before' });
+                    contentDef.push({ text: `Halaman ${index + 1}`, fontSize: 18, bold: true, color: '#4F46E5', margin: [0, 0, 0, 10] });
+                    contentDef.push({ image: page.imageDataUrl, width: 200, margin: [0, 0, 0, 15] });
+                    contentDef.push({ text: 'Teks Hasil Ekstraksi:', fontSize: 12, bold: true, margin: [0, 0, 0, 5] });
+                    contentDef.push({ text: page.text || "", fontSize: 11, margin: [0, 0, 0, 10] });
+                });
+
+                const docDefinition = { content: contentDef };
+                pdfMake.createPdf(docDefinition).download('buku-scan-ultimate.pdf');
+            } catch (err) {
+                alert('Gagal membuat dokumen PDF: ' + err.message);
+            }
         }
 
-        // Ekspor ke TXT
+        // Format TXT
         function generateTXT() {
             if (pages.length === 0) return;
-            let fullText = "";
-            pages.forEach((page, index) => {
-                fullText += `=== HALAMAN ${index + 1} ===\n\n${page.text}\n\n\n`;
-            });
-            const blob = new Blob([fullText], { type: "text/plain;charset=utf-8" });
-            saveAs(blob, "buku-scan-ultimate.txt");
+            try {
+                let fullText = "";
+                pages.forEach((page, index) => {
+                    fullText += `=== HALAMAN ${index + 1} ===\n\n${page.text || ""}\n\n\n`;
+                });
+                const blob = new Blob([fullText], { type: "text/plain;charset=utf-8" });
+                saveAs(blob, "buku-scan-ultimate.txt");
+            } catch (err) {
+                alert('Gagal membuat file TXT: ' + err.message);
+            }
         }
     </script>
 </body>
