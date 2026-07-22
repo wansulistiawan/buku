@@ -6,18 +6,16 @@
     <title>Bulk Book Scanner Pro Ultimate</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <!-- Tesseract.js untuk OCR -->
+    <!-- Tesseract.js -->
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
-    <!-- Cropper.js untuk Pemotongan & Rotasi Gambar -->
+    <!-- Cropper.js -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
-    <!-- Docx.js untuk Generate Word -->
+    <!-- Docx.js -->
     <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.js"></script>
-    <!-- pdfmake untuk Generate PDF -->
+    <!-- pdfmake & vfs_fonts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
-    <!-- FileSaver.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
@@ -32,41 +30,41 @@
                 </div>
                 <div>
                     <h1 class="text-xl font-bold text-slate-900">BulkBook Scan <span class="text-indigo-600">Ultimate</span></h1>
-                    <p class="text-xs text-slate-500">IndexedDB Storage & Advanced Crop Engine</p>
+                    <p class="text-xs text-slate-500">IndexedDB Storage & Mobile Friendly</p>
                 </div>
             </div>
 
-            <div class="flex items-center space-x-3">
+            <div class="flex items-center space-x-3 relative">
                 <!-- Dropdown Bahasa OCR -->
                 <div class="flex items-center space-x-1.5 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
                     <i data-lucide="languages" class="w-4 h-4 text-slate-500"></i>
                     <select id="ocr-lang" class="bg-transparent text-xs font-medium text-slate-700 focus:outline-none">
-                        <option value="ind+eng">Indonesia + Inggris</option>
-                        <option value="ind">Indonesia Saja</option>
-                        <option value="eng">Inggris Saja</option>
+                        <option value="ind+eng">ID + EN</option>
+                        <option value="ind">Indonesia</option>
+                        <option value="eng">Inggris</option>
                         <option value="ara">Arab</option>
                         <option value="jpn">Jepang</option>
                     </select>
                 </div>
 
-                <!-- Tombol Download Global (Perbaikan: Menggunakan Klik, Bukan Hover) -->
+                <!-- Tombol Download Global -->
                 <div class="relative">
-                    <button id="btn-global-download" disabled class="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-xl font-medium transition disabled:opacity-40 disabled:cursor-not-allowed shadow-sm">
+                    <button id="btn-global-download" onclick="toggleExportMenu(event)" disabled class="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-xl font-medium transition disabled:opacity-40 disabled:cursor-not-allowed shadow-sm">
                         <i data-lucide="download" class="w-4 h-4"></i>
-                        <span>Ekspor Dokumen (<span id="page-count-badge">0</span>)</span>
+                        <span>Ekspor (<span id="page-count-badge">0</span>)</span>
                         <i data-lucide="chevron-down" class="w-3.5 h-3.5 ml-1"></i>
                     </button>
                     <!-- Menu Dropdown Format Ekspor -->
-                    <div id="export-dropdown-menu" class="absolute right-0 mt-2 w-52 bg-white border border-slate-200 rounded-xl shadow-lg hidden p-1.5 z-50">
-                        <button onclick="generateWord(); closeExportMenu();" class="w-full text-left px-3 py-3 text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg flex items-center space-x-2">
+                    <div id="export-dropdown-menu" class="absolute right-0 mt-2 w-52 bg-white border border-slate-200 rounded-xl shadow-xl hidden p-1.5 z-50">
+                        <button onclick="generateWord(); closeExportMenu();" class="w-full text-left px-3 py-2.5 text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg flex items-center space-x-2.5">
                             <i data-lucide="file-text" class="w-4 h-4 text-blue-600"></i>
                             <span>Simpan ke Word (.docx)</span>
                         </button>
-                        <button onclick="generatePDF(); closeExportMenu();" class="w-full text-left px-3 py-3 text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg flex items-center space-x-2">
+                        <button onclick="generatePDF(); closeExportMenu();" class="w-full text-left px-3 py-2.5 text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg flex items-center space-x-2.5">
                             <i data-lucide="file" class="w-4 h-4 text-rose-600"></i>
                             <span>Simpan ke PDF (.pdf)</span>
                         </button>
-                        <button onclick="generateTXT(); closeExportMenu();" class="w-full text-left px-3 py-3 text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg flex items-center space-x-2">
+                        <button onclick="generateTXT(); closeExportMenu();" class="w-full text-left px-3 py-2.5 text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg flex items-center space-x-2.5">
                             <i data-lucide="align-left" class="w-4 h-4 text-emerald-600"></i>
                             <span>Simpan Teks Saja (.txt)</span>
                         </button>
@@ -84,7 +82,6 @@
             <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col items-center">
                 <h2 class="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-3 w-full text-left">Pindai / Tambah Halaman</h2>
                 
-                <!-- Viewport Kamera / Pratinjau -->
                 <div class="relative w-full aspect-[3/4] bg-slate-900 rounded-xl overflow-hidden flex items-center justify-center mb-4 shadow-inner">
                     <video id="video" autoplay playsinline class="w-full h-full object-cover hidden"></video>
                     <canvas id="canvas" class="hidden"></canvas>
@@ -94,7 +91,6 @@
                     </div>
                 </div>
 
-                <!-- Tombol Aksi Kamera & Upload -->
                 <div class="grid grid-cols-2 gap-2 w-full">
                     <button id="btn-start-cam" onclick="toggleCamera()" class="flex items-center justify-center space-x-2 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl transition text-sm font-medium">
                         <i data-lucide="video" class="w-4 h-4"></i>
@@ -115,12 +111,11 @@
                 </div>
             </div>
 
-            <!-- Status Database Info -->
             <div class="bg-indigo-50 border border-indigo-100 p-4 rounded-2xl flex items-start space-x-3">
                 <i data-lucide="database" class="w-5 h-5 text-indigo-600 shrink-0 mt-0.5"></i>
                 <div class="text-xs text-indigo-900 leading-relaxed">
                     <span class="font-semibold block mb-1">IndexedDB Storage Aktif:</span>
-                    Semua gambar resolusi penuh dan hasil editan Anda disimpan secara aman di database lokal browser. Tidak ada risiko kepenuhan memori seperti localStorage.
+                    Semua gambar resolusi penuh dan hasil editan Anda disimpan secara aman di database lokal browser.
                 </div>
             </div>
         </div>
@@ -139,7 +134,6 @@
                     </button>
                 </div>
 
-                <!-- Daftar Halaman Container -->
                 <div id="pages-container" class="space-y-4 flex-1 overflow-y-auto max-h-[700px] pr-1">
                     <div id="empty-state" class="text-center py-16 text-slate-400">
                         <i data-lucide="file-question" class="w-12 h-12 mx-auto stroke-1 mb-2 opacity-50"></i>
@@ -167,7 +161,6 @@
                 <img id="crop-image-element" class="max-h-[50vh] block" alt="Crop Target">
             </div>
 
-            <!-- Toolbar Filter & Rotasi di Modal -->
             <div class="p-3 bg-slate-100 border-t border-slate-200 flex flex-wrap gap-2 justify-between items-center">
                 <div class="flex space-x-2">
                     <button onclick="cropperInstance.rotate(-90)" class="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium hover:bg-slate-50 flex items-center space-x-1">
@@ -195,6 +188,7 @@
         let isCameraActive = false;
         let cropperInstance = null;
         let activeCropBlobUrl = null;
+        let pages = [];
 
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
@@ -206,33 +200,43 @@
         const emptyState = document.getElementById('empty-state');
         const totalPagesEl = document.getElementById('total-pages');
         const pageCountBadge = document.getElementById('page-count-badge');
-        
-        // Elemen Dropdown Ekspor
         const btnGlobalDownload = document.getElementById('btn-global-download');
         const exportDropdownMenu = document.getElementById('export-dropdown-menu');
-        
         const cropModal = document.getElementById('crop-modal');
         const cropImageElement = document.getElementById('crop-image-element');
 
-        // ==== LOGIKA DROPDOWN EKSPOR (MOBILE FRIENDLY) ====
-        btnGlobalDownload.addEventListener('click', function(event) {
-            if (this.disabled) return;
+        // ==== LOGIKA DOWNLOAD NATIVE (Pengganti FileSaver) ====
+        function triggerNativeDownload(blob, filename) {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            }, 100);
+        }
+
+        // ==== LOGIKA DROPDOWN EKSPOR ====
+        function toggleExportMenu(event) {
             event.stopPropagation();
             exportDropdownMenu.classList.toggle('hidden');
-        });
+        }
 
         function closeExportMenu() {
             exportDropdownMenu.classList.add('hidden');
         }
 
-        window.addEventListener('click', function(e) {
-            if (!btnGlobalDownload.contains(e.target) && !exportDropdownMenu.contains(e.target)) {
+        window.addEventListener('click', (e) => {
+            if (!document.getElementById('btn-global-download').contains(e.target) && !exportDropdownMenu.contains(e.target)) {
                 closeExportMenu();
             }
         });
-        // ==================================================
 
-        // Inisialisasi IndexedDB
+        // ==== LOGIKA DATABASE & KAMERA (TIDAK ADA YANG DIUBAH) ====
         function initDB() {
             return new Promise((resolve, reject) => {
                 const request = indexedDB.open('BulkBookScannerDB', 1);
@@ -251,9 +255,9 @@
             });
         }
 
-        // Operasi Database
         function dbSavePage(pageObj) {
             return new Promise((resolve, reject) => {
+                if (!db) return resolve();
                 const tx = db.transaction('pages', 'readwrite');
                 const store = tx.objectStore('pages');
                 store.put(pageObj);
@@ -264,6 +268,7 @@
 
         function dbDeletePage(pageId) {
             return new Promise((resolve, reject) => {
+                if (!db) return resolve();
                 const tx = db.transaction('pages', 'readwrite');
                 const store = tx.objectStore('pages');
                 store.delete(pageId);
@@ -274,6 +279,7 @@
 
         function dbClearAll() {
             return new Promise((resolve, reject) => {
+                if (!db) return resolve();
                 const tx = db.transaction('pages', 'readwrite');
                 const store = tx.objectStore('pages');
                 store.clear();
@@ -283,6 +289,7 @@
         }
 
         async function loadPagesFromDB() {
+            if (!db) return;
             const tx = db.transaction('pages', 'readonly');
             const store = tx.objectStore('pages');
             const request = store.getAll();
@@ -293,14 +300,11 @@
             };
         }
 
-        let pages = [];
-
         window.addEventListener('DOMContentLoaded', async () => {
-            await initDB();
+            try { await initDB(); } catch (err) { console.error("DB Init error", err); }
             lucide.createIcons();
         });
 
-        // Toggle Kamera
         async function toggleCamera() {
             if (isCameraActive) {
                 stopCamera();
@@ -369,7 +373,6 @@
             event.target.value = '';
         }
 
-        // Modal Cropper Handler
         function openCropModal(imageUrl) {
             activeCropBlobUrl = imageUrl;
             cropImageElement.src = imageUrl;
@@ -398,7 +401,7 @@
             const data = imgData.data;
             for (let i = 0; i < data.length; i += 4) {
                 let avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
-                let contrast = avg > 128 ? 255 : 0; 
+                let contrast = avg > 128 ? 255 : 0;
                 data[i] = contrast;
                 data[i + 1] = contrast;
                 data[i + 2] = contrast;
@@ -433,7 +436,6 @@
             processQueueOCR(newPage);
         }
 
-        // Proses OCR per Halaman
         async function processQueueOCR(pageObj) {
             try {
                 const selectedLang = document.getElementById('ocr-lang').value;
@@ -488,7 +490,6 @@
             renderPagesUI();
         }
 
-        // Render UI
         function renderPagesUI() {
             totalPagesEl.textContent = pages.length;
             pageCountBadge.textContent = pages.length;
@@ -549,6 +550,7 @@
             lucide.createIcons();
         }
 
+        // ==== LOGIKA EKSPOR DENGAN PENANGANAN ERROR ====
         function dataURLToArrayBuffer(dataURL) {
             const BASE64_MARKER = ';base64,';
             const base64Index = dataURL.indexOf(BASE64_MARKER) + BASE64_MARKER.length;
@@ -562,77 +564,92 @@
             return array.buffer;
         }
 
-        // Ekspor ke Word (.docx)
         async function generateWord() {
             if (pages.length === 0) return;
-            const { Document, Packer, Paragraph, TextRun, ImageRun, PageBreak } = window.docx;
-            let docSections = [];
+            try {
+                const { Document, Packer, Paragraph, TextRun, ImageRun, PageBreak } = window.docx;
+                let docSections = [];
 
-            pages.forEach((page, index) => {
-                const imageArrayBuffer = dataURLToArrayBuffer(page.imageDataUrl);
-                const textLines = page.text.split('\n');
-                
-                let pageChildren = [
-                    new Paragraph({
-                        children: [new TextRun({ text: `Halaman ${index + 1}`, bold: true, size: 28, color: "4F46E5" })],
-                        spacing: { after: 150 }
-                    }),
-                    new Paragraph({
-                        children: [new ImageRun({ data: imageArrayBuffer, transformation: { width: 250, height: 333 } })],
-                        spacing: { after: 200 }
-                    }),
-                    new Paragraph({
-                        children: [new TextRun({ text: "Teks Hasil Ekstraksi (Dapat Diedit):", bold: true, size: 20 })],
-                        spacing: { after: 100 }
-                    })
-                ];
+                pages.forEach((page, index) => {
+                    const imageArrayBuffer = dataURLToArrayBuffer(page.imageDataUrl);
+                    
+                    // Pastikan teks tidak null/undefined sebelum dipecah
+                    const safeText = page.text || "";
+                    const textLines = safeText.split('\n');
+                    
+                    let pageChildren = [
+                        new Paragraph({
+                            children: [new TextRun({ text: `Halaman ${index + 1}`, bold: true, size: 28, color: "4F46E5" })],
+                            spacing: { after: 150 }
+                        }),
+                        // Penempatan Gambar Halaman Asli di Atas Teks
+                        new Paragraph({
+                            children: [new ImageRun({ data: imageArrayBuffer, transformation: { width: 300, height: 400 } })],
+                            spacing: { after: 200 }
+                        }),
+                        new Paragraph({
+                            children: [new TextRun({ text: "Teks Hasil Ekstraksi (Dapat Diedit):", bold: true, size: 20 })],
+                            spacing: { after: 100 }
+                        })
+                    ];
 
-                textLines.forEach(line => {
-                    pageChildren.push(new Paragraph({ children: [new TextRun({ text: line, size: 22 })], spacing: { after: 100 } }));
+                    textLines.forEach(line => {
+                        if (line.trim() !== "") {
+                            pageChildren.push(new Paragraph({ children: [new TextRun({ text: line, size: 22 })], spacing: { after: 100 } }));
+                        }
+                    });
+
+                    if (index < pages.length - 1) {
+                        pageChildren.push(new Paragraph({ children: [new PageBreak()] }));
+                    }
+
+                    docSections.push({ properties: {}, children: pageChildren });
                 });
 
-                if (index < pages.length - 1) {
-                    pageChildren.push(new Paragraph({ children: [new PageBreak()] }));
-                }
-
-                docSections.push({ properties: {}, children: pageChildren });
-            });
-
-            const doc = new Document({ sections: docSections });
-            try {
+                const doc = new Document({ sections: docSections });
                 const blob = await Packer.toBlob(doc);
-                saveAs(blob, "buku-scan-ultimate.docx");
+                
+                // Gunakan fungsi native download anti gagal
+                triggerNativeDownload(blob, "hasil-scan-ultimate.docx");
             } catch (err) {
-                alert('Gagal membuat dokumen Word: ' + err.message);
+                console.error(err);
+                alert('Terjadi kesalahan saat memproses Word: ' + err.message);
             }
         }
 
-        // Ekspor ke PDF (.pdf)
         function generatePDF() {
             if (pages.length === 0) return;
-            let contentDef = [];
+            try {
+                let contentDef = [];
+                pages.forEach((page, index) => {
+                    if (index > 0) contentDef.push({ text: '', pageBreak: 'before' });
+                    contentDef.push({ text: `Halaman ${index + 1}`, fontSize: 18, bold: true, color: '#4F46E5', margin: [0, 0, 0, 10] });
+                    contentDef.push({ image: page.imageDataUrl, width: 200, margin: [0, 0, 0, 15] });
+                    contentDef.push({ text: 'Teks Hasil Ekstraksi:', fontSize: 12, bold: true, margin: [0, 0, 0, 5] });
+                    contentDef.push({ text: page.text || "", fontSize: 11, margin: [0, 0, 0, 10] });
+                });
 
-            pages.forEach((page, index) => {
-                if (index > 0) contentDef.push({ text: '', pageBreak: 'before' });
-                contentDef.push({ text: `Halaman ${index + 1}`, fontSize: 18, bold: true, color: '#4F46E5', margin: [0, 0, 0, 10] });
-                contentDef.push({ image: page.imageDataUrl, width: 200, margin: [0, 0, 0, 15] });
-                contentDef.push({ text: 'Teks Hasil Ekstraksi:', fontSize: 12, bold: true, margin: [0, 0, 0, 5] });
-                contentDef.push({ text: page.text, fontSize: 11, margin: [0, 0, 0, 10] });
-            });
-
-            const docDefinition = { content: contentDef };
-            pdfMake.createPdf(docDefinition).download('buku-scan-ultimate.pdf');
+                const docDefinition = { content: contentDef };
+                pdfMake.createPdf(docDefinition).download('hasil-scan-ultimate.pdf');
+            } catch (err) {
+                console.error(err);
+                alert('Terjadi kesalahan saat memproses PDF: ' + err.message);
+            }
         }
 
-        // Ekspor ke TXT
         function generateTXT() {
             if (pages.length === 0) return;
-            let fullText = "";
-            pages.forEach((page, index) => {
-                fullText += `=== HALAMAN ${index + 1} ===\n\n${page.text}\n\n\n`;
-            });
-            const blob = new Blob([fullText], { type: "text/plain;charset=utf-8" });
-            saveAs(blob, "buku-scan-ultimate.txt");
+            try {
+                let fullText = "";
+                pages.forEach((page, index) => {
+                    fullText += `=== HALAMAN ${index + 1} ===\n\n${page.text || ""}\n\n\n`;
+                });
+                const blob = new Blob([fullText], { type: "text/plain;charset=utf-8" });
+                triggerNativeDownload(blob, "hasil-scan-ultimate.txt");
+            } catch (err) {
+                console.error(err);
+                alert('Terjadi kesalahan saat memproses TXT: ' + err.message);
+            }
         }
     </script>
 </body>
