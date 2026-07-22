@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bulk Book Scanner Pro Ultimate</title>
+    <title>Book Scanner Pro Ultimate</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <!-- Tesseract.js -->
@@ -29,8 +29,8 @@
                     <i data-lucide="book-open-check" class="w-6 h-6"></i>
                 </div>
                 <div>
-                    <h1 class="text-xl font-bold text-slate-900">BulkBook Scan <span class="text-indigo-600">Ultimate</span></h1>
-                    <p class="text-xs text-slate-500">IndexedDB Storage & Mobile Friendly</p>
+                    <h1 class="text-xl font-bold text-slate-900">Book Scan <span class="text-indigo-600">Ultimate</span></h1>
+                    <p class="text-xs text-slate-500">Scan & Edit</p>
                 </div>
             </div>
 
@@ -595,10 +595,7 @@
                             children: [new ImageRun({ data: imageArrayBuffer, transformation: { width: 300, height: 400 } })],
                             spacing: { after: 200 }
                         }),
-                        new Paragraph({
-                            children: [new TextRun({ text: "Teks Hasil Ekstraksi (Dapat Diedit):", bold: true, size: 20 })],
-                            spacing: { after: 100 }
-                        })
+                        
                     ];
 
                     textLines.forEach(line => {
